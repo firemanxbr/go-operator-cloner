@@ -193,6 +193,8 @@ ENVTEST_VERSION ?= $(shell v='$(call gomodver,sigs.k8s.io/controller-runtime)'; 
 ENVTEST_K8S_VERSION ?= $(shell v='$(call gomodver,k8s.io/api)'; \
   [ -n "$$v" ] || { echo "Set ENVTEST_K8S_VERSION manually (k8s.io/api replace has no tag)" >&2; exit 1; }; \
   printf '%s\n' "$$v" | sed -E 's/^v?[0-9]+\.([0-9]+).*/1.\1/')
+ENVTEST_RETRIES ?= 3
+ENVTEST_RETRY_DELAY ?= 5
 
 GOLANGCI_LINT_VERSION ?= v2.8.0
 .PHONY: kustomize
@@ -208,10 +210,19 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: setup-envtest
 setup-envtest: envtest ## Download the binaries required for ENVTEST in the local bin directory.
 	@echo "Setting up envtest binaries for Kubernetes version $(ENVTEST_K8S_VERSION)..."
-	@"$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path || { \
-		echo "Error: Failed to set up envtest binaries for version $(ENVTEST_K8S_VERSION)."; \
-		exit 1; \
-	}
+	@attempt=1; \
+	while [ $$attempt -le $(ENVTEST_RETRIES) ]; do \
+		if "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path; then \
+			exit 0; \
+		fi; \
+		if [ $$attempt -eq $(ENVTEST_RETRIES) ]; then \
+			echo "Error: Failed to set up envtest binaries for version $(ENVTEST_K8S_VERSION) after $(ENVTEST_RETRIES) attempts."; \
+			exit 1; \
+		fi; \
+		echo "Retrying envtest download ($$attempt/$(ENVTEST_RETRIES)) in $(ENVTEST_RETRY_DELAY)s..."; \
+		attempt=$$((attempt + 1)); \
+		sleep $(ENVTEST_RETRY_DELAY); \
+	done
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
