@@ -1,0 +1,7 @@
+## Append samples of your project ##
+resources:
+- source-namespace.yaml
+- source-secret.yaml
+- target-namespace.yaml
+- sync_v1alpha1_secretclone.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

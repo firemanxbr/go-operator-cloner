@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: private-image-demo
+  namespace: team-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: private-image-demo
+  template:
+    metadata:
+      labels:
+        app: private-image-demo
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: app
+          image: ghcr.io/firemanxbr/replace-me-with-a-private-image:latest
+          command: ["sleep", "3600"]
