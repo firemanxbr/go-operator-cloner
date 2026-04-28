@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -256,6 +257,30 @@ func TestReconcileRejectsInvalidPolicy(t *testing.T) {
 	}
 	if readyConditionStatus(refreshedPolicy.Status.Conditions, syncv1alpha1.SecretCloneConditionReady) != metav1.ConditionFalse {
 		t.Fatalf("expected Ready condition to be false for invalid policy")
+	}
+}
+
+func TestSafeInt32(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input int
+		want  int32
+	}{
+		{name: "value in range", input: 42, want: 42},
+		{name: "clamps high values", input: math.MaxInt32 + 1, want: math.MaxInt32},
+		{name: "clamps low values", input: math.MinInt32 - 1, want: math.MinInt32},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := safeInt32(tt.input); got != tt.want {
+				t.Fatalf("safeInt32(%d) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
 	}
 }
 

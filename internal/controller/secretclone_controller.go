@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -340,7 +341,7 @@ func (r *SecretCloneReconciler) patchStatus(
 
 	policy.Status.ObservedGeneration = policy.Generation
 	policy.Status.ObservedSourceResourceVersion = sourceResourceVersion
-	policy.Status.SyncedNamespaces = int32(syncedNamespaces)
+	policy.Status.SyncedNamespaces = safeInt32(syncedNamespaces)
 	policy.Status.LastSyncTime = &now
 
 	meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{
@@ -369,6 +370,18 @@ func (r *SecretCloneReconciler) patchStatus(
 	})
 
 	return r.Status().Patch(ctx, policy, client.MergeFrom(before))
+}
+
+func safeInt32(value int) int32 {
+	if value > math.MaxInt32 {
+		return math.MaxInt32
+	}
+
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+
+	return int32(value)
 }
 
 func (r *SecretCloneReconciler) requeueAfterStatus(
